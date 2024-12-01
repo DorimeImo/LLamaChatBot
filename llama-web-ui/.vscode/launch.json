@@ -1,0 +1,18 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Launch React App",
+            "type": "node",
+            "request": "launch",
+            "runtimeExecutable": "node",
+            "program": "${workspaceFolder}/node_modules/react-scripts/bin/react-scripts.js",
+            "args": ["start"],
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "BROWSER": "none"
+            },
+            "console": "integratedTerminal"
+        }
+    ]
+}

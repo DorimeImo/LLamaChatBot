@@ -1,0 +1,17 @@
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+bin/
+obj/
+
+# Node.js
+node_modules/
+.env
+
+# Other
+*.log
+*.tmp
+*.DS_Store

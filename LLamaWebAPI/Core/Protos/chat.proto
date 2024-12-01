@@ -1,0 +1,17 @@
+﻿syntax = "proto3";
+
+option csharp_namespace = "LLamaClient.ChatGrpc";
+
+service ChatService {
+  rpc ChatStream (stream ChatMessageRequest) returns (stream ChatMessageResponse);
+}
+
+message ChatMessageRequest {
+  string username = 1;         // Optional; included if server expects it in each message
+  string message = 2;
+}
+
+message ChatMessageResponse {
+  string message = 1;
+  bool isFinal = 2;            // Indicates the end of the response for a particular message
+}
