@@ -1,10 +1,10 @@
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import  ChatPage  from './features/chat/ChatPage';
-import { AuthProvider } from './features/auth/GlobalAuthContext';
+import  ChatPage  from './pages/ChatPage';
+import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './ProtectedRoute';
-import LoginPage from './features/auth/LoginPage';
-import RegisterPage from './features/auth/RegisterPage';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
 
 function App() {
     return (
