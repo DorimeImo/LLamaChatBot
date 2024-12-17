@@ -20,7 +20,7 @@ namespace LLamaWebAPI.Services
             _logger = loggerFactory.CreateLogger("Security");
         }
 
-        public async Task<(string AccessToken, string RefreshToken)> CreateNewUser(string username, string password, string email)
+        public async Task<(string AccessToken, string RefreshToken, string UserId)> CreateNewUser(string username, string password, string email)
         {
             if (await _authRepository.GetUserByUsername(username) != null)
             {
@@ -57,7 +57,7 @@ namespace LLamaWebAPI.Services
 
                 await _authRepository.CreateOrUpdateToken(userRefreshToken);
 
-                return tokens;
+                return ( tokens.AccessToken, tokens.RefreshToken, newUser.Id);
             }
             catch (Exception ex)
             {
@@ -66,7 +66,7 @@ namespace LLamaWebAPI.Services
             }
         }
 
-        public async Task<(string NewAccessToken, string NewRefreshToken)> RefreshTokens(string userId, string username, string providedRefreshToken)
+        public async Task<(string NewAccessToken, string NewRefreshToken)> RefreshTokens(string userId, string providedRefreshToken)
         {
             var user = await _authRepository.GetUserById(userId);
             var token = await _authRepository.GetTokenByUserId(userId);
@@ -136,13 +136,13 @@ namespace LLamaWebAPI.Services
             }
         }
 
-        public async Task RevokeRefreshToken(string userId, string username)
+        public async Task RevokeRefreshToken(string userId)
         {
             var token = await _authRepository.GetTokenByUserId(userId);
 
             if (token == null || token.IsRevoked)
             {
-                _logger.LogWarning("Attempt to revoke an invalid or already revoked token for user with username {username}.", username);
+                _logger.LogWarning("Attempt to revoke an invalid or already revoked token for user with userID {userId}.", userId);
                 throw new InvalidOperationException("Invalid token.");
             }
             token.IsRevoked = true;

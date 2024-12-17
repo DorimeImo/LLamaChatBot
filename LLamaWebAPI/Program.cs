@@ -49,7 +49,7 @@ public class Program
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
                         options.UseSqlServer(builder.Configuration.GetConnectionString("AuthDatabase")));
 
-            //TEST 
+            //Dmitry: here we need to narrow to the ui domain only (port in my case)
             builder.Services.AddCors(options =>
             {
                 options.AddPolicy("AllowAllOrigins", builder =>
@@ -74,7 +74,7 @@ public class Program
 
             app.UseMiddleware<TraceIdentifierLoggingMiddleware>();
 
-            //TEST
+            //Dmitry: this needs to be modified to AllowFrontend
             app.UseCors("AllowAllOrigins");
 
             app.UseHttpsRedirection();

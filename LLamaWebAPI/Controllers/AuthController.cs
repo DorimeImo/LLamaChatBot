@@ -1,5 +1,7 @@
-﻿using LLamaWebAPI.Core.Interfaces;
+﻿using Azure.Core;
+using LLamaWebAPI.Core.Interfaces;
 using LLamaWebAPI.Core.Models.Requests;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LLamaWebAPI.Controllers
@@ -25,7 +27,21 @@ namespace LLamaWebAPI.Controllers
             try
             {
                 var tokens = await _authService.CreateNewUser(request.Username, request.Password, request.Email);
-                return Ok(tokens);
+
+                var cookieOptions = new CookieOptions
+                {
+                    HttpOnly = true,
+                    Secure = true,
+                    SameSite = SameSiteMode.Strict, // Protects against CSRF
+                    Expires = DateTime.UtcNow.AddDays(14)
+                };
+                Response.Cookies.Append("refreshToken", tokens.RefreshToken, cookieOptions);
+
+                return Ok(new 
+                { 
+                    accessToken = tokens.AccessToken,
+                    userId = tokens.UserId
+                });
             }
             catch (InvalidOperationException ex)
             {
@@ -67,8 +83,26 @@ namespace LLamaWebAPI.Controllers
         {
             try
             {
-                var newTokens = await _authService.RefreshTokens(request.UserId, request.Username, request.RefreshToken);
-                return Ok(newTokens);
+                if (!Request.Cookies.TryGetValue("refreshToken", out var refreshToken))
+                {
+                    return Unauthorized(new { Message = "Refresh token not found." });
+                }
+
+                var tokens = await _authService.RefreshTokens(request.UserId, refreshToken);
+
+                var cookieOptions = new CookieOptions
+                {
+                    HttpOnly = true,
+                    Secure = true,
+                    SameSite = SameSiteMode.Strict,
+                    Expires = DateTime.UtcNow.AddDays(14)
+                };
+                Response.Cookies.Append("refreshToken", tokens.NewRefreshToken, cookieOptions);
+
+                return Ok(new
+                {
+                    accessToken = tokens.NewAccessToken
+                });
             }
             catch (UnauthorizedAccessException ex)
             {
@@ -87,13 +121,34 @@ namespace LLamaWebAPI.Controllers
         {
             try
             {
-                await _authService.RevokeRefreshToken(request.UserId, request.UserId);
+                await _authService.RevokeRefreshToken(request.UserId);
                 return Ok(new { Message = "Logged out successfully." });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Unexpected error occurred in Logout(...) for user with id: {if}", request.UserId);
                 return StatusCode(500, new { Message = "Failed to logout. An unexpected error occurred." });
+            }
+        }
+
+        [HttpPost("verifyToken")]
+        public async Task <IActionResult> VerifyToken(string accessToken)
+        {
+            try
+            {
+                var principal = _authService.ValidateAccessToken(accessToken);
+                if (principal != null)
+                    return Ok();
+                else
+                {
+                    _logger.LogWarning("Access token verication failed.");
+                    return Unauthorized(new { Message = "ccess token verication failed."});
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error occurred in Register(...)");
+                return StatusCode(500, new { Message = "An unexpected error occurred.", Details = ex.Message });
             }
         }
     }

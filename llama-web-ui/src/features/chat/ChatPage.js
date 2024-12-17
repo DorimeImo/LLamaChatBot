@@ -1,26 +1,25 @@
 import React, { useState, useRef, useCallback } from 'react';
+import useAuth from '../auth/AuthUtility';
 
 function ChatPage() {
-    const [message, setMessage] = useState('');
+    const { isAuthenticated } = useAuth();
+    const [message, setMessage] = useState(''); //useState reflects changes of these 2 properties message and messages to the user.
     const [messages, setMessages] = useState([]);
 
-    const appendMessage = useCallback((eventData) => {
+    const appendMessage = (eventData) => {
         setMessages((prev) => {
             if (prev.length > 0 && prev[prev.length - 1].sender === 'LLama') {
                 const updatedMessages = [...prev];
-
-                updatedMessages[updatedMessages.length - 1].text += eventData;
-               
+                updatedMessages[updatedMessages.length - 1].text += eventData;               
                 eventData = '';
-
                 return updatedMessages;
             }
             return [...prev, { sender: 'LLama', text: eventData }];
         });
-    }, []);
+    };
 
     const sendMessage = async () => {
-        if (!message.trim()) return; // Prevent sending empty messages
+        if (!isAuthenticated || !message.trim()) return;
 
         setMessages((prev) => [...prev, { sender: 'You', text: message }]);
         setMessage('');
@@ -66,7 +65,8 @@ function ChatPage() {
                 <textarea
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
-                    placeholder="Type your message here..."
+                    placeholder={isAuthenticated ? 'Type your message...' : 'Login to enable chat'}
+                    disabled={!isAuthenticated}
                     style={{ flex: 1, marginRight: '10px' }}
                 />
                 <button onClick={sendMessage}>Send Message</button>
