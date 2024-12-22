@@ -3,6 +3,7 @@ using LLamaWebAPI.Core.Interfaces;
 using LLamaWebAPI.Core.Models.Requests;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 namespace LLamaWebAPI.Controllers
 {
@@ -24,6 +25,16 @@ namespace LLamaWebAPI.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterRequest request)
         {
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
+                foreach (var item in errors)
+                {
+                    _logger.LogWarning("Invalid input : " + item.ToString());
+                }
+                return BadRequest(new { Message = "Invalid input", Errors = errors });
+            }
+
             try
             {
                 var tokens = await _authService.CreateNewUser(request.Username, request.Password, request.Email);
@@ -36,6 +47,7 @@ namespace LLamaWebAPI.Controllers
                     Expires = DateTime.UtcNow.AddDays(14)
                 };
                 Response.Cookies.Append("refreshToken", tokens.RefreshToken, cookieOptions);
+                Response.Cookies.Append("userId", tokens.UserId.ToString(), cookieOptions);
 
                 return Ok(new 
                 { 
@@ -64,7 +76,21 @@ namespace LLamaWebAPI.Controllers
                 await Task.Delay(TimeSpan.FromMilliseconds(200));
 
                 var tokens = await _authService.AuthenticateUser(request.Username, request.Password);
-                return Ok(tokens);
+                var cookieOptions = new CookieOptions
+                {
+                    HttpOnly = true,
+                    Secure = true,
+                    SameSite = SameSiteMode.Strict, // Protects against CSRF
+                    Expires = DateTime.UtcNow.AddDays(14)
+                };
+                Response.Cookies.Append("refreshToken", tokens.RefreshToken, cookieOptions);
+                Response.Cookies.Append("userId", tokens.UserId.ToString(), cookieOptions);
+
+                return Ok(new
+                {
+                    accessToken = tokens.AccessToken,
+                    userId = tokens.UserId
+                });
             }
             catch (UnauthorizedAccessException)
             {
@@ -78,17 +104,20 @@ namespace LLamaWebAPI.Controllers
             }
         }
 
-        [HttpPost("refresh")]
-        public async Task<IActionResult> RefreshTokens([FromBody] RefreshTokenRequest request)
+        [HttpGet("refresh")]
+        public async Task<IActionResult> RefreshTokens()
         {
+            Request.Cookies.TryGetValue("refreshToken", out var refreshToken);
+            Request.Cookies.TryGetValue("userId", out var userId);
+
             try
             {
-                if (!Request.Cookies.TryGetValue("refreshToken", out var refreshToken))
+                if (string.IsNullOrEmpty(refreshToken) || string.IsNullOrEmpty(userId))
                 {
-                    return Unauthorized(new { Message = "Refresh token not found." });
+                    return Unauthorized(new { Message = "Refresh token or userId are not found." });
                 }
 
-                var tokens = await _authService.RefreshTokens(request.UserId, refreshToken);
+                var tokens = await _authService.RefreshTokens(int.Parse(userId), refreshToken);
 
                 var cookieOptions = new CookieOptions
                 {
@@ -106,7 +135,7 @@ namespace LLamaWebAPI.Controllers
             }
             catch (UnauthorizedAccessException ex)
             {
-                _logger.LogWarning("RefreshToken(...) failed for user with id {id}", request.UserId);
+                _logger.LogWarning("RefreshToken(...) failed for user with id {id}", userId);
                 return Unauthorized(new { Message = "Invalid or expired refresh token." , Details = ex.Message });
             }
             catch (Exception ex)
@@ -116,24 +145,45 @@ namespace LLamaWebAPI.Controllers
             }
         }
 
-        [HttpPost("logout")]
-        public async Task<IActionResult> Logout([FromBody] LogoutRequest request)
+        [HttpGet("logout")]
+        public async Task<IActionResult> Logout()
         {
-            try
+            Request.Cookies.TryGetValue("userId", out var userId);
+            if (!string.IsNullOrEmpty(userId))
             {
-                await _authService.RevokeRefreshToken(request.UserId);
-                return Ok(new { Message = "Logged out successfully." });
+                try
+                {
+                    await _authService.RevokeRefreshToken(int.Parse(userId));
+                    return Ok(new { Message = "Logged out successfully." });
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Unexpected error occurred in Logout(...) for user with id: {if}", userId);
+                    return StatusCode(500, new { Message = "Failed to logout. An unexpected error occurred." });
+                }
             }
-            catch (Exception ex)
+            else 
             {
-                _logger.LogError(ex, "Unexpected error occurred in Logout(...) for user with id: {if}", request.UserId);
+                _logger.LogWarning("User id is not presented.");
                 return StatusCode(500, new { Message = "Failed to logout. An unexpected error occurred." });
             }
         }
 
-        [HttpPost("verifyToken")]
-        public async Task <IActionResult> VerifyToken(string accessToken)
+        [HttpGet("verifyToken")]
+        public async Task <IActionResult> VerifyToken()
         {
+            _logger.LogInformation("Access token verication.");
+
+            var authHeader = Request.Headers["Authorization"].FirstOrDefault();
+
+            if (authHeader == null || !authHeader.StartsWith("Bearer "))
+            {
+                _logger.LogWarning("Authorization header is missing or invalid.");
+                return Unauthorized(new { Message = "Authorization header is missing or invalid." });
+            }
+
+            var accessToken = authHeader.Substring("Bearer ".Length).Trim();
+
             try
             {
                 var principal = _authService.ValidateAccessToken(accessToken);

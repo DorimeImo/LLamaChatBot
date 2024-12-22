@@ -1,18 +1,22 @@
-import { useEffect } from 'react';
-import { useContext } from 'react';
-import axiosInstance from '../api/axiosInstance';
-import { AuthContext } from '../context/AuthContext';
+import { useContext, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { setupInterceptors } from '../api/setupInterceptors';
+import axios from 'axios';
+import { AuthContext } from '../context/AuthContext';
+import { setupInterceptors } from './setupInterceptors';
 
 const useAxios = () => {
     const authContext = useContext(AuthContext);
     const navigate = useNavigate();
 
-    useEffect(() => {
-        setupInterceptors(axiosInstance, authContext, navigate);
-        // Empty dependency array ensures interceptors are set up only once
-    }, [authContext, navigate]);
+    const axiosInstance = useMemo(() => {
+        const instance = axios.create({
+            baseURL: 'http://localhost:7224/api',
+            withCredentials: true,
+        });
+
+        setupInterceptors(instance, authContext, navigate);
+        return instance;
+    }, [authContext, navigate]); 
 
     return axiosInstance;
 };

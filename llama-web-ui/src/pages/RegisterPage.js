@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import useAxios from '../hooks/useAxios';
+import React, { useState, useContext } from 'react';
+import useAxios from '../api/useAxios';
 import { AuthContext } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import useAuth from '../hooks/useAuth';
 
 function RegisterPage() {
     const [username, setUsername] = useState('');
@@ -17,7 +18,8 @@ function RegisterPage() {
 
     const handleRegister = async () => {
         try {
-            const response = axiosInstance.post('/api/Auth/register', { username, password, email }, { withCredentials: true });
+            console.log({ username, password, email });
+            const response = axiosInstance.post('http://localhost:7224/api/Auth/register', { username, password, email }, { withCredentials: true });
             const { accessToken, userId } = response.data;
 
             setAuth(accessToken, userId);

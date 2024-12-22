@@ -1,5 +1,4 @@
-import axios from 'axios';
-import { setupAxiosInterceptors } from './axiosInstance'; // Ensure correct import path
+
 
 export const setupInterceptors = (axiosInstance, authContext, navigate) => {
     // Request Interceptor
@@ -22,14 +21,13 @@ export const setupInterceptors = (axiosInstance, authContext, navigate) => {
             if (error.response && error.response.status === 401 && !originalRequest._retry) {
                 originalRequest._retry = true;
                 try {
-                    const refreshResponse = await axios.post(
-                        '/api/Auth/refresh',
-                        { userId: authContext.authState.userId },
+                    const refreshResponse = await axiosInstance.get(
+                        '/Auth/refresh',
                         { withCredentials: true }
                     );
                     const { accessToken } = refreshResponse.data;
 
-                    authContext.setAuth(accessToken, authContext.authState.userId);
+                    authContext.setAuth(accessToken);
 
                     originalRequest.headers['Authorization'] = `Bearer ${accessToken}`;
                     return axiosInstance(originalRequest);

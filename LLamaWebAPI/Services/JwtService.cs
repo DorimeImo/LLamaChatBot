@@ -49,7 +49,7 @@ namespace LLamaWebAPI.Services
             }
         }
 
-        public (string AccessToken, string RefreshToken) GenerateTokens(string userId)
+        public (string AccessToken, string RefreshToken) GenerateTokens(int userId)
         {
             _logger.LogInformation("Generating tokens for user with id {id}", userId);
             var accessToken = GenerateAccessToken(userId);
@@ -58,7 +58,7 @@ namespace LLamaWebAPI.Services
             return (accessToken, refreshToken);
         }
 
-        public (string NewAccessToken, string NewRefreshToken) RefreshTokens(string userId)
+        public (string NewAccessToken, string NewRefreshToken) RefreshTokens(int userId)
         {
             _logger.LogInformation("Refreshing tokens for user with id {id}", userId);
             var newAccessToken = GenerateAccessToken(userId);
@@ -67,14 +67,14 @@ namespace LLamaWebAPI.Services
             return (newAccessToken, newRefreshToken);
         }
 
-        private string GenerateAccessToken(string userId)
+        private string GenerateAccessToken(int userId)
         {
             try
             {
                 var tokenHandler = new JwtSecurityTokenHandler();
                 var tokenDescriptor = new SecurityTokenDescriptor
                 {
-                    Subject = new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, userId) }),
+                    Subject = new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, userId.ToString()) }),
                     Expires = DateTime.UtcNow.AddMinutes(_configs.AccessTokenExpirationMinutes),
                     Audience = _configs.Audience,
                     Issuer = _configs.Issuer,
@@ -92,7 +92,7 @@ namespace LLamaWebAPI.Services
             }
         }
 
-        private string GenerateRefreshToken(string userId)
+        private string GenerateRefreshToken(int userId)
         {
             try
             {

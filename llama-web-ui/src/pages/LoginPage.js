@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
@@ -7,7 +7,7 @@ import useAuth from '../hooks/useAuth';
 function LoginPage() {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
-    const [message, setMessage] = useState('');
+    const [error, setError] = useState('');
 
     const { setAuth } = useContext(AuthContext); 
     const { setIsAuthenticated } = useAuth();
@@ -16,18 +16,24 @@ function LoginPage() {
 
     const handleLogin = async () => {
         try {
-            const response = await axios.post('/api/Auth/login', { username, password }, 
+            const response = await axios.post('http://localhost:7224/api/Auth/login', { username, password }, 
                 { withCredentials: true });
 
+            console.log(`Response is received`);    
             const { accessToken, userId } = response.data;
+            console.log(`accessToken: ${accessToken}, userId: ${userId}`);
+
             setAuth(accessToken, userId);
             setIsAuthenticated(true);
 
+            console.log('Login successful, navigating to /chat');
             navigate('/chat');
         } catch (err) {
             setError(err.response?.data?.Message || 'Login failed');
             
-            navigate('/register');
+            if (err.response?.status === 404) {
+                navigate('/register');
+            }
         }
     };
 

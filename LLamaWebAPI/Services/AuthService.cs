@@ -3,6 +3,7 @@ using LLamaWebAPI.Core.Interfaces;
 using LLamaWebAPI.Core.Models;
 using LLamaWebAPI.Data;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
 namespace LLamaWebAPI.Services
@@ -20,7 +21,7 @@ namespace LLamaWebAPI.Services
             _logger = loggerFactory.CreateLogger("Security");
         }
 
-        public async Task<(string AccessToken, string RefreshToken, string UserId)> CreateNewUser(string username, string password, string email)
+        public async Task<(string AccessToken, string RefreshToken, int UserId)> CreateNewUser(string username, string password, string email)
         {
             if (await _authRepository.GetUserByUsername(username) != null)
             {
@@ -39,7 +40,7 @@ namespace LLamaWebAPI.Services
 
             newUser = await _authRepository.CreateOrUpdateUser(newUser); 
 
-            if(string.IsNullOrEmpty(newUser.Id))
+            if(newUser.Id == 0)
             {
                 _logger.LogError("Failed to persist a new user.");
                 throw new InvalidOperationException($"Failed to generate a user");
@@ -66,7 +67,7 @@ namespace LLamaWebAPI.Services
             }
         }
 
-        public async Task<(string NewAccessToken, string NewRefreshToken)> RefreshTokens(string userId, string providedRefreshToken)
+        public async Task<(string NewAccessToken, string NewRefreshToken)> RefreshTokens(int userId, string providedRefreshToken)
         {
             var user = await _authRepository.GetUserById(userId);
             var token = await _authRepository.GetTokenByUserId(userId);
@@ -104,7 +105,7 @@ namespace LLamaWebAPI.Services
                 throw new UnauthorizedAccessException("Provided RefreshToken is not valid. Authorization denied.");
         }
 
-        public async Task <(string AccessToken, string RefreshToken)> AuthenticateUser(string username, string password)
+        public async Task <(string AccessToken, string RefreshToken, int UserId)> AuthenticateUser(string username, string password)
         {
             var user = await _authRepository.GetUserByUsername(username);
 
@@ -127,7 +128,7 @@ namespace LLamaWebAPI.Services
 
                 await _authRepository.CreateOrUpdateToken(refToken);
 
-                return tokens;
+                return (tokens.AccessToken, tokens.RefreshToken, user.Id);
             }
             catch (Exception ex)
             {
@@ -136,7 +137,7 @@ namespace LLamaWebAPI.Services
             }
         }
 
-        public async Task RevokeRefreshToken(string userId)
+        public async Task RevokeRefreshToken(int userId)
         {
             var token = await _authRepository.GetTokenByUserId(userId);
 

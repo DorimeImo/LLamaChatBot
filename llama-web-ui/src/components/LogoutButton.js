@@ -5,14 +5,13 @@ import { useNavigate } from 'react-router-dom';
 
 function LogoutButton() {
     const { clearAuth } = useContext(AuthContext);
-    const axiosInstance = useAxios();
     const navigate = useNavigate();
+    const axiosInstance = useAxios();
 
     const handleLogout = async () => {
         try {
-            await axiosInstance.post(
-                '/api/Auth/logout',
-                { userId: authState.userId },
+            await axiosInstance.get(
+                '/Auth/logout',
                 { withCredentials: true }
             );
             clearAuth();

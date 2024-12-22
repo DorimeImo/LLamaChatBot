@@ -18,14 +18,14 @@ namespace LLamaWebAPI.Data
         }
 
         //USERS
-        public async Task <User?> GetUserById(string id)
+        public async Task <User?> GetUserById(int id)
         {
             return await _dbContext.Users.FirstOrDefaultAsync(user => user.Id == id);
         }
 
         public async Task<User?> GetUserByUsername(string username)
         {
-            return await _dbContext.Users.FirstOrDefaultAsync(user => user.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
+            return await _dbContext.Users.Where(u => u.Username.ToUpper() == username.ToUpper()).FirstOrDefaultAsync(); 
         }
 
         public async Task<User> CreateOrUpdateUser(User user)
@@ -45,7 +45,6 @@ namespace LLamaWebAPI.Data
                 }
                 else
                 {
-                    user.Id = Guid.NewGuid().ToString();
                     await _dbContext.Users.AddAsync(user);
                 }
                 await _dbContext.SaveChangesAsync();
@@ -71,7 +70,7 @@ namespace LLamaWebAPI.Data
         }
 
         //TOKENS
-        public async Task<Token?> GetTokenByUserId(string userId)
+        public async Task<Token?> GetTokenByUserId(int userId)
         {
             return await _dbContext.Tokens.FirstOrDefaultAsync(t => t.UserId == userId);
         }
@@ -87,14 +86,12 @@ namespace LLamaWebAPI.Data
 
                 if (existingToken != null)
                 {
-                    existingToken.TokenId = refreshToken.TokenId;
                     existingToken.HashedRefreshToken = refreshToken.HashedRefreshToken;
                     existingToken.TokenExpiration = refreshToken.TokenExpiration;
                     existingToken.IsRevoked = refreshToken.IsRevoked;
                 }
                 else
                 {
-                    refreshToken.TokenId = Guid.NewGuid().ToString();
                     await _dbContext.Tokens.AddAsync(refreshToken);
                 }
 

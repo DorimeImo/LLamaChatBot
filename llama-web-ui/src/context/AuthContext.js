@@ -4,16 +4,15 @@ export const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
     const [authState, setAuthState] = useState({
-        accessToken: null,
-        userId: null,
+        accessToken: null
     });
 
-    const setAuth = (accessToken, userId) => {
-        setAuthState({ accessToken, userId });
+    const setAuth = (accessToken) => {
+        setAuthState({ accessToken});
     };
 
     const clearAuth = () => {
-        setAuthState({ accessToken: null, userId: null });
+        setAuthState({ accessToken: null});
     };
 
     return (
