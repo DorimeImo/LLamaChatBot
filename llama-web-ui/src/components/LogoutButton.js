@@ -1,5 +1,5 @@
 import React, { useContext } from 'react';
-import useAxios from '../hooks/useAxios';
+import useAxios from '../api/useAxios';
 import { AuthContext } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -15,12 +15,10 @@ function LogoutButton() {
                 { withCredentials: true }
             );
             clearAuth();
-            setIsAuthenticated(false);
             navigate('/login');
         } catch (err) {
             console.error('Logout failed:', err);
             clearAuth();
-            setIsAuthenticated(false);
             navigate('/login');
         }
     };

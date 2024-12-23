@@ -2,6 +2,7 @@ import React, { useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import useAuth from '../hooks/useAuth';
+import LogoutButton from './LogoutButton';
 
 function Header() {
     const { isAuthenticated } = useAuth();
@@ -35,9 +36,7 @@ function Header() {
                             <Link to="/register">Register</Link>
                         </>
                     ) : (
-                        <button onClick={handleLogout} style={{ border: 'none', background: 'transparent' }}>
-                            Logout
-                        </button>
+                        <LogoutButton />
                     )}
                 </div>
             </div>

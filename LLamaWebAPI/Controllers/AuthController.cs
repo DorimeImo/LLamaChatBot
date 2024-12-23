@@ -116,6 +116,7 @@ namespace LLamaWebAPI.Controllers
                 {
                     return Unauthorized(new { Message = "Refresh token or userId are not found." });
                 }
+                _logger.LogInformation("RefreshToken(...) processing...");
 
                 var tokens = await _authService.RefreshTokens(int.Parse(userId), refreshToken);
 
@@ -148,25 +149,42 @@ namespace LLamaWebAPI.Controllers
         [HttpGet("logout")]
         public async Task<IActionResult> Logout()
         {
-            Request.Cookies.TryGetValue("userId", out var userId);
-            if (!string.IsNullOrEmpty(userId))
+            _logger.LogInformation("Logout processing ...");
+
+            if (Request.Cookies.TryGetValue("userId", out var userId) && !string.IsNullOrEmpty(userId))
             {
                 try
                 {
                     await _authService.RevokeRefreshToken(int.Parse(userId));
+
+                    _logger.LogInformation("Logout deleting cookies.");
+
+                    Response.Cookies.Delete("userId", new CookieOptions
+                    {
+                        HttpOnly = true,
+                        Secure = true,
+                        SameSite = SameSiteMode.Strict
+                    });
+
+                    Response.Cookies.Delete("refreshToken", new CookieOptions
+                    {
+                        HttpOnly = true,
+                        Secure = true,
+                        SameSite = SameSiteMode.Strict
+                    });
+
+                    _logger.LogInformation("User with id {userId} successfully logged out.", userId);
                     return Ok(new { Message = "Logged out successfully." });
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Unexpected error occurred in Logout(...) for user with id: {if}", userId);
+                    _logger.LogError(ex, "Unexpected error occurred in Logout(...) for user with id: {userId}", userId);
                     return StatusCode(500, new { Message = "Failed to logout. An unexpected error occurred." });
                 }
             }
-            else 
-            {
-                _logger.LogWarning("User id is not presented.");
-                return StatusCode(500, new { Message = "Failed to logout. An unexpected error occurred." });
-            }
+
+            _logger.LogWarning("Logout request failed. User id is not present in cookies.");
+            return BadRequest(new { Message = "Failed to logout. User ID is missing." });
         }
 
         [HttpGet("verifyToken")]

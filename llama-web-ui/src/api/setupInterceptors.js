@@ -18,6 +18,10 @@ export const setupInterceptors = (axiosInstance, authContext, navigate) => {
         async (error) => {
             const originalRequest = error.config;
 
+            if (originalRequest.url.includes('/Auth/refresh')) {
+                return Promise.reject(error);
+            }
+
             if (error.response && error.response.status === 401 && !originalRequest._retry) {
                 originalRequest._retry = true;
                 try {
